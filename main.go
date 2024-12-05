@@ -34,15 +34,22 @@ type BlogPosts struct {
 type Rss struct {
 	Channel struct {
 		Item []struct {
-			Link string `xml:"link"`
+			Link  string `xml:"link"`
+			Title string `xml:"title"`
 		} `xml:"item"`
 	} `xml:"channel"`
 }
 
 type Feed struct {
 	Entry []struct {
-		ID string `xml:"id"`
+		ID    string `xml:"id"`
+		Title string `xml:"title"`
 	} `xml:"entry"`
+}
+
+type Link struct {
+	link  string
+	title string
 }
 
 func main() {
@@ -50,13 +57,13 @@ func main() {
 	flag.BoolVar(&just, "j", false, "just run(don't notify)")
 	flag.Usage = func() {
 		flag.PrintDefaults()
-		fmt.Println("version: 0.0.1")
+		fmt.Println("version: 0.0.2")
 	}
 	flag.Parse()
 
 	config := openConfig()
 
-	results := make(map[string]string)
+	results := make(map[Link]string)
 	for _, v := range youtube(config.YoutubeChannels) {
 		results[v] = "youtube"
 	}
@@ -77,6 +84,7 @@ func main() {
 
 	sqlStmt := `CREATE TABLE IF NOT EXISTS links(
 	            link TEXT PRIMARY KEY,
+				title TEXT NOT NULL,
 	            UNIQUE(link)
 	            );`
 	_, err = db.Exec(sqlStmt)
@@ -95,7 +103,8 @@ func main() {
 
 	for rows.Next() {
 		var link string
-		err = rows.Scan(&link)
+		var title string
+		err = rows.Scan(&link, &title)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,23 +114,25 @@ func main() {
 	glnassistant.Stderr("count", "database -> "+fmt.Sprintf("%v", len(uniq)))
 
 	for k, v := range results {
-		if _, ok := uniq[k]; ok {
+		if _, ok := uniq[k.link]; ok {
 			continue
 		}
 
-		insertStmt := `INSERT INTO links (link) VALUES (?)`
-		_, err = db.Exec(insertStmt, k)
+		insertStmt := `INSERT INTO links (link, title) VALUES (?, ?)`
+		_, err = db.Exec(insertStmt, k.link, k.title)
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		l := fmt.Sprintf("[%s](%s)", k.title, k.link)
+
 		if !just {
 			if v == "youtube" {
-				notify(config.BotToken, config.ChatID, config.MessageThreadIDYoutube, k)
+				notify(config.BotToken, config.ChatID, config.MessageThreadIDYoutube, l)
 			} else if v == "medium" {
-				notify(config.BotToken, config.ChatID, config.MessageThreadIDMedium, k)
+				notify(config.BotToken, config.ChatID, config.MessageThreadIDMedium, l)
 			} else if v == "blog" {
-				notify(config.BotToken, config.ChatID, config.MessageThreadIDBlog, k)
+				notify(config.BotToken, config.ChatID, config.MessageThreadIDBlog, l)
 			}
 		}
 	}
@@ -148,7 +159,7 @@ func openConfig() Config {
 
 func notify(bot_token, chat_id, message_thread_id, link string) {
 
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage?chat_id=%s&message_thread_id=%s&text=%s", bot_token, chat_id, message_thread_id, link)
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage?parse_mode=markdown&chat_id=%s&message_thread_id=%s&text=%s", bot_token, chat_id, message_thread_id, link)
 	resp, err := http.Get(url)
 	if err != nil {
 		// log.Fatalf("Error making GET request: %v\n", err)
@@ -165,7 +176,7 @@ func notify(bot_token, chat_id, message_thread_id, link string) {
 	// if err != nil {
 	// 	log.Fatalf("Error reading response body: %v\n", err)
 	// }
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 3)
 }
 
 func request(url string) []byte {
@@ -198,13 +209,13 @@ func request(url string) []byte {
 		return nil
 	}
 
-	glnassistant.Stderr("info", "-> "+url)
+	glnassistant.Stderr("request", "-> "+url)
 	time.Sleep(time.Second * 2)
 	return body
 }
 
-func youtube(list []string) []string {
-	var results []string
+func youtube(list []string) []Link {
+	var results []Link
 	for _, l := range list {
 		res := request("https://www.youtube.com/feeds/videos.xml?channel_id=" + l)
 		if res != nil {
@@ -216,7 +227,10 @@ func youtube(list []string) []string {
 			}
 
 			for _, r := range response.Entry {
-				results = append(results, "https://www.youtube.com/watch?v="+strings.ReplaceAll(r.ID, "yt:video:", ""))
+				results = append(results, Link{
+					link:  "https://www.youtube.com/watch?v=" + strings.ReplaceAll(r.ID, "yt:video:", ""),
+					title: r.Title,
+				})
 			}
 		}
 	}
@@ -224,8 +238,8 @@ func youtube(list []string) []string {
 	return results
 }
 
-func medium(tags []string) []string {
-	var results []string
+func medium(tags []string) []Link {
+	var results []Link
 
 	for _, t := range tags {
 		res := request("https://medium.com/feed/tag/" + t)
@@ -237,8 +251,10 @@ func medium(tags []string) []string {
 			}
 
 			for _, r := range response.Channel.Item {
-
-				results = append(results, strings.Split(r.Link, "?")[0])
+				results = append(results, Link{
+					link:  strings.Split(r.Link, "?")[0],
+					title: r.Title,
+				})
 			}
 		}
 	}
@@ -246,8 +262,8 @@ func medium(tags []string) []string {
 	return results
 }
 
-func blog(list []BlogPosts) []string {
-	var results []string
+func blog(list []BlogPosts) []Link {
+	var results []Link
 
 	for _, l := range list {
 		res := request(l.Name)
@@ -260,7 +276,10 @@ func blog(list []BlogPosts) []string {
 				}
 
 				for _, r := range response.Channel.Item {
-					results = append(results, r.Link)
+					results = append(results, Link{
+						link:  r.Link,
+						title: r.Title,
+					})
 				}
 
 			} else {
@@ -271,7 +290,10 @@ func blog(list []BlogPosts) []string {
 				}
 
 				for _, r := range response.Entry {
-					results = append(results, r.ID)
+					results = append(results, Link{
+						link:  r.ID,
+						title: r.Title,
+					})
 				}
 			}
 		}

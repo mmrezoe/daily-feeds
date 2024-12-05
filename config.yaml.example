@@ -1,0 +1,20 @@
+# telegram
+bot_token: ""
+chat_id: ""
+message_thread_id_youtube: ""
+message_thread_id_medium: ""
+message_thread_id_blog: ""
+# medium tags
+medium_tags:
+  - ""
+  - ""
+# youtube channels
+youtube_channels:
+  - ""
+  - ""
+# blog posts
+blog-posts:
+  - name: ""
+    kind: ""
+  - name: ""
+    kind: ""

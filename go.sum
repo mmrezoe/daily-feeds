@@ -7,8 +7,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/mattn/go-sqlite3 v1.14.24 h1:tpSp2G2KyMnnQu99ngJ47EIkWVmliIizyZBfPrBWDRM=
 github.com/mattn/go-sqlite3 v1.14.24/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
-github.com/mmrezoe/glnassistant v1.0.3 h1:3Jg8XMJhLCewxQ94yJ03NI45SDvND/U+8WUYLC3PkVA=
-github.com/mmrezoe/glnassistant v1.0.3/go.mod h1:V3D06izK/gixBdVALdQyJ3JJ1GkpzOyxA41rds9eDZQ=
+github.com/mmrezoe/glnassistant v1.0.5 h1:bn0ZYntyu1Lv2i8bwJLpAdTZfYpavuTzOm/YRNklPtY=
+github.com/mmrezoe/glnassistant v1.0.5/go.mod h1:V3D06izK/gixBdVALdQyJ3JJ1GkpzOyxA41rds9eDZQ=
 golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.25.0 h1:r+8e+loiHxRqhXVl6ML1nO3l1+oFoWbnlu2Ehimmi34=

@@ -3,11 +3,14 @@
 first write config.yaml
 
 ### Installation
+
 ```
 go install github.com/mmrezoe/daily-feeds@latest
 ```
-or 
+
+or
 git clone project then `go build .`
+
 ### First run
 
 ```sh
@@ -19,3 +22,8 @@ git clone project then `go build .`
 ```sh
 ./daily-feeds
 ```
+
+### TODO:
+
+- [ ] Resend notifications that were rejected
+- [ ] Adding a ai to summarize

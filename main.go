@@ -5,9 +5,10 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -57,7 +58,7 @@ func main() {
 	flag.BoolVar(&just, "j", false, "just run(don't notify)")
 	flag.Usage = func() {
 		flag.PrintDefaults()
-		fmt.Println("version: 0.0.2")
+		fmt.Println("version: 0.0.3")
 	}
 	flag.Parse()
 
@@ -74,7 +75,7 @@ func main() {
 		results[v] = "blog"
 	}
 
-	glnassistant.Stderr("count", "result -> "+fmt.Sprintf("%v", len(results)))
+	glnassistant.Stdout("count", "result -> "+fmt.Sprintf("%v", len(results)))
 
 	db, err := sql.Open("sqlite3", "./links.db")
 	if err != nil {
@@ -111,7 +112,7 @@ func main() {
 		uniq[link] = true
 	}
 
-	glnassistant.Stderr("count", "database -> "+fmt.Sprintf("%v", len(uniq)))
+	glnassistant.Stdout("count", "database -> "+fmt.Sprintf("%v", len(uniq)))
 
 	for k, v := range results {
 		if _, ok := uniq[k.link]; ok {
@@ -125,6 +126,7 @@ func main() {
 		}
 
 		l := fmt.Sprintf("[%s](%s)", k.title, k.link)
+		glnassistant.Stdout("notify", k.title)
 
 		if !just {
 			if v == "youtube" {
@@ -144,7 +146,7 @@ func main() {
 }
 
 func openConfig() Config {
-	data, err := ioutil.ReadFile("config.yaml")
+	data, err := os.ReadFile("config.yaml")
 	if err != nil {
 		log.Fatalf("Can't open file: %v\n", err)
 	}
@@ -162,20 +164,16 @@ func notify(bot_token, chat_id, message_thread_id, link string) {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage?parse_mode=markdown&chat_id=%s&message_thread_id=%s&text=%s", bot_token, chat_id, message_thread_id, link)
 	resp, err := http.Get(url)
 	if err != nil {
-		// log.Fatalf("Error making GET request: %v\n", err)
-		glnassistant.Stderr("error", "Error request "+err.Error())
+		glnassistant.Stderr("Error request " + err.Error())
+		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// log.Fatalf("GET request failed with status: %s", resp.Status)
-		glnassistant.Stderr("error", "Can't Notify: "+link)
+		glnassistant.Stderr("Can't Notify: " + link)
+		return
 	}
 
-	// body, err := ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	log.Fatalf("Error reading response body: %v\n", err)
-	// }
 	time.Sleep(time.Second * 3)
 }
 
@@ -183,7 +181,7 @@ func request(url string) []byte {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		glnassistant.Stderr("error", "create request: "+url)
+		glnassistant.Stderr("create request: " + url)
 		return nil
 	}
 
@@ -192,24 +190,24 @@ func request(url string) []byte {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		glnassistant.Stderr("error", "Error making request: "+url)
+		glnassistant.Stderr("Error making request: " + url)
 		return nil
 	}
 	defer resp.Body.Close()
 
 	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		glnassistant.Stderr("error", "Can't read body: "+url)
+		glnassistant.Stderr("Can't read body: " + url)
 		return nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		glnassistant.Stderr("error", "Status: "+resp.Status+" "+url)
+		glnassistant.Stderr("Status: " + resp.Status + " " + url)
 		return nil
 	}
 
-	glnassistant.Stderr("request", "-> "+url)
+	glnassistant.Stdout("request", "-> "+url)
 	time.Sleep(time.Second * 2)
 	return body
 }
@@ -223,7 +221,7 @@ func youtube(list []string) []Link {
 			var response Feed
 			err := xml.Unmarshal(res, &response)
 			if err != nil {
-				glnassistant.Stderr("error", "Unmarshal response: "+err.Error())
+				glnassistant.Stderr("Unmarshal response: " + err.Error())
 			}
 
 			for _, r := range response.Entry {
@@ -247,7 +245,7 @@ func medium(tags []string) []Link {
 			var response Rss
 			err := xml.Unmarshal(res, &response)
 			if err != nil {
-				glnassistant.Stderr("error", "Unmarshal response: "+err.Error())
+				glnassistant.Stderr("Unmarshal response: " + err.Error())
 			}
 
 			for _, r := range response.Channel.Item {
@@ -272,7 +270,7 @@ func blog(list []BlogPosts) []Link {
 				var response Rss
 				err := xml.Unmarshal(res, &response)
 				if err != nil {
-					glnassistant.Stderr("error", "Unmarshal response: "+err.Error())
+					glnassistant.Stderr("Unmarshal response: " + err.Error())
 				}
 
 				for _, r := range response.Channel.Item {
@@ -286,7 +284,7 @@ func blog(list []BlogPosts) []Link {
 				var response Feed
 				err := xml.Unmarshal(res, &response)
 				if err != nil {
-					glnassistant.Stderr("error", "Unmarshal response: "+err.Error())
+					glnassistant.Stderr("Unmarshal response: " + err.Error())
 				}
 
 				for _, r := range response.Entry {
